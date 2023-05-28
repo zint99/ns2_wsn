@@ -11,11 +11,11 @@
 // #include <cmu/list.h>
 // #include <scheduler.h>
 
+#include <aodv/aodv_rqueue.h>
+#include <aodv/aodv_rtable.h>
+#include <classifier/classifier-port.h>
 #include <cmu-trace.h>
 #include <priqueue.h>
-#include <aodv/aodv_rtable.h>
-#include <aodv/aodv_rqueue.h>
-#include <classifier/classifier-port.h>
 
 /*
   Allows local repair of routes
@@ -96,81 +96,74 @@ class AODV;
 /*
   Timers (Broadcast ID, Hello, Neighbor Cache, Route Cache)
 */
-class BroadcastTimer : public Handler
-{
+class BroadcastTimer : public Handler {
 public:
-        BroadcastTimer(AODV *a) : agent(a) {}
-        void handle(Event *);
+  BroadcastTimer(AODV *a) : agent(a) {}
+  void handle(Event *);
 
 private:
-        AODV *agent;
-        Event intr;
+  AODV *agent;
+  Event intr;
 };
 
-class HelloTimer : public Handler
-{
+class HelloTimer : public Handler {
 public:
-        HelloTimer(AODV *a) : agent(a) {}
-        void handle(Event *);
+  HelloTimer(AODV *a) : agent(a) {}
+  void handle(Event *);
 
 private:
-        AODV *agent;
-        Event intr;
+  AODV *agent;
+  Event intr;
 };
 
-class NeighborTimer : public Handler
-{
+class NeighborTimer : public Handler {
 public:
-        NeighborTimer(AODV *a) : agent(a) {}
-        void handle(Event *);
+  NeighborTimer(AODV *a) : agent(a) {}
+  void handle(Event *);
 
 private:
-        AODV *agent;
-        Event intr;
+  AODV *agent;
+  Event intr;
 };
 
-class RouteCacheTimer : public Handler
-{
+class RouteCacheTimer : public Handler {
 public:
-        RouteCacheTimer(AODV *a) : agent(a) {}
-        void handle(Event *);
+  RouteCacheTimer(AODV *a) : agent(a) {}
+  void handle(Event *);
 
 private:
-        AODV *agent;
-        Event intr;
+  AODV *agent;
+  Event intr;
 };
 
-class LocalRepairTimer : public Handler
-{
+class LocalRepairTimer : public Handler {
 public:
-        LocalRepairTimer(AODV *a) : agent(a) {}
-        void handle(Event *);
+  LocalRepairTimer(AODV *a) : agent(a) {}
+  void handle(Event *);
 
 private:
-        AODV *agent;
-        Event intr;
+  AODV *agent;
+  Event intr;
 };
 
 /*
   Broadcast ID Cache
 */
-class BroadcastID
-{
-        friend class AODV;
+class BroadcastID {
+  friend class AODV;
 
 public:
-        BroadcastID(nsaddr_t i, u_int32_t b)
-        {
-                src = i;
-                id = b;
-        }
+  BroadcastID(nsaddr_t i, u_int32_t b) {
+    src = i;
+    id = b;
+  }
 
 protected:
-        LIST_ENTRY(BroadcastID)
-        link;
-        nsaddr_t src;
-        u_int32_t id;
-        double expire; // now + BCAST_ID_SAVE s
+  LIST_ENTRY(BroadcastID)
+  link;
+  nsaddr_t src;
+  u_int32_t id;
+  double expire; // now + BCAST_ID_SAVE s
 };
 
 LIST_HEAD(aodv_bcache, BroadcastID);
@@ -178,140 +171,137 @@ LIST_HEAD(aodv_bcache, BroadcastID);
 /*
   The Routing Agent
 */
-class AODV : public Agent
-{
+class AODV : public Agent {
 
-        /*
-         * make some friends first
-         */
+  /*
+   * make some friends first
+   */
 
-        friend class aodv_rt_entry;
-        friend class BroadcastTimer;
-        friend class HelloTimer;
-        friend class NeighborTimer;
-        friend class RouteCacheTimer;
-        friend class LocalRepairTimer;
-
-public:
-        AODV(nsaddr_t id);
-
-        void recv(Packet *p, Handler *);
-
-protected:
-        int command(int, const char *const *);
-        int initialized() { return 1 && target_; }
-
-        /*
-         * Route Table Management
-         */
-        void rt_resolve(Packet *p);
-        void rt_update(aodv_rt_entry *rt, u_int32_t seqnum,
-                       u_int16_t metric, nsaddr_t nexthop,
-                       double expire_time);
-        void rt_down(aodv_rt_entry *rt);
-        void local_rt_repair(aodv_rt_entry *rt, Packet *p);
+  friend class aodv_rt_entry;
+  friend class BroadcastTimer;
+  friend class HelloTimer;
+  friend class NeighborTimer;
+  friend class RouteCacheTimer;
+  friend class LocalRepairTimer;
 
 public:
-        void rt_ll_failed(Packet *p);
-        void handle_link_failure(nsaddr_t id);
+  AODV(nsaddr_t id);
+
+  void recv(Packet *p, Handler *);
 
 protected:
-        void rt_purge(void);
+  int command(int, const char *const *);
+  int initialized() { return 1 && target_; }
 
-        void enque(aodv_rt_entry *rt, Packet *p);
-        Packet *deque(aodv_rt_entry *rt);
+  /*
+   * Route Table Management
+   */
+  void rt_resolve(Packet *p);
+  void rt_update(aodv_rt_entry *rt, u_int32_t seqnum, u_int16_t metric,
+                 nsaddr_t nexthop, double expire_time);
+  void rt_down(aodv_rt_entry *rt);
+  void local_rt_repair(aodv_rt_entry *rt, Packet *p);
 
-        /*
-         * Neighbor Management
-         */
-        void nb_insert(nsaddr_t id);
-        AODV_Neighbor *nb_lookup(nsaddr_t id);
-        void nb_delete(nsaddr_t id);
-        void nb_purge(void);
+public:
+  void rt_ll_failed(Packet *p);
+  void handle_link_failure(nsaddr_t id);
 
-        /*
-         * Broadcast ID Management
-         */
+protected:
+  void rt_purge(void);
 
-        void id_insert(nsaddr_t id, u_int32_t bid);
-        bool id_lookup(nsaddr_t id, u_int32_t bid);
-        void id_purge(void);
+  void enque(aodv_rt_entry *rt, Packet *p);
+  Packet *deque(aodv_rt_entry *rt);
 
-        /*
-         * Packet TX Routines
-         */
-        void forward(aodv_rt_entry *rt, Packet *p, double delay);
-        void sendHello(void);
-        void sendRequest(nsaddr_t dst);
+  /*
+   * Neighbor Management
+   */
+  void nb_insert(nsaddr_t id);
+  AODV_Neighbor *nb_lookup(nsaddr_t id);
+  void nb_delete(nsaddr_t id);
+  void nb_purge(void);
 
-        void sendReply(nsaddr_t ipdst, u_int32_t hop_count,
-                       nsaddr_t rpdst, u_int32_t rpseq,
-                       u_int32_t lifetime, double timestamp);
-        void sendError(Packet *p, bool jitter = true);
+  /*
+   * Broadcast ID Management
+   */
 
-        /*
-         * Packet RX Routines
-         */
-        void recvAODV(Packet *p);
-        void recvHello(Packet *p);
-        void recvRequest(Packet *p);
-        void recvReply(Packet *p);
-        void recvError(Packet *p);
+  void id_insert(nsaddr_t id, u_int32_t bid);
+  bool id_lookup(nsaddr_t id, u_int32_t bid);
+  void id_purge(void);
 
-        /*
-         * History management
-         */
+  /*
+   * Packet TX Routines
+   */
+  void forward(aodv_rt_entry *rt, Packet *p, double delay);
+  void sendHello(void);
+  void sendRequest(nsaddr_t dst);
 
-        double PerHopTime(aodv_rt_entry *rt);
+  void sendReply(nsaddr_t ipdst, u_int32_t hop_count, nsaddr_t rpdst,
+                 u_int32_t rpseq, u_int32_t lifetime, double timestamp);
+  void sendError(Packet *p, bool jitter = true);
 
-        nsaddr_t index;  // IP Address of this node
-        u_int32_t seqno; // Sequence Number
-        int bid;         // Broadcast ID
+  /*
+   * Packet RX Routines
+   */
+  void recvAODV(Packet *p);
+  void recvHello(Packet *p);
+  void recvRequest(Packet *p);
+  void recvReply(Packet *p);
+  void recvError(Packet *p);
 
-        aodv_rtable rthead; // routing table
-        aodv_ncache nbhead; // Neighbor Cache
-        aodv_bcache bihead; // Broadcast ID Cache
+  /*
+   * History management
+   */
 
-        /*
-         * Timers
-         */
-        BroadcastTimer btimer;
-        HelloTimer htimer;
-        NeighborTimer ntimer;
-        RouteCacheTimer rtimer;
-        LocalRepairTimer lrtimer;
+  double PerHopTime(aodv_rt_entry *rt);
 
-        /*
-         * Routing Table
-         */
-        aodv_rtable rtable;
-        /*
-         *  A "drop-front" queue used by the routing layer to buffer
-         *  packets to which it does not have a route.
-         */
-        aodv_rqueue rqueue;
+  nsaddr_t index;  // IP Address of this node
+  u_int32_t seqno; // Sequence Number
+  int bid;         // Broadcast ID
 
-        /*
-         * A mechanism for logging the contents of the routing
-         * table.
-         */
-        Trace *logtarget;
+  aodv_rtable rthead; // routing table
+  aodv_ncache nbhead; // Neighbor Cache
+  aodv_bcache bihead; // Broadcast ID Cache
 
-        /*
-         * A pointer to the network interface queue that sits
-         * between the "classifier" and the "link layer".
-         */
-        PriQueue *ifqueue;
+  /*
+   * Timers
+   */
+  BroadcastTimer btimer;
+  HelloTimer htimer;
+  NeighborTimer ntimer;
+  RouteCacheTimer rtimer;
+  LocalRepairTimer lrtimer;
 
-        /*
-         * Logging stuff
-         */
-        void log_link_del(nsaddr_t dst);
-        void log_link_broke(Packet *p);
-        void log_link_kept(nsaddr_t dst);
+  /*
+   * Routing Table
+   */
+  aodv_rtable rtable;
+  /*
+   *  A "drop-front" queue used by the routing layer to buffer
+   *  packets to which it does not have a route.
+   */
+  aodv_rqueue rqueue;
 
-        /* for passing packets up to agents */
-        PortClassifier *dmux_;
+  /*
+   * A mechanism for logging the contents of the routing
+   * table.
+   */
+  Trace *logtarget;
+
+  /*
+   * A pointer to the network interface queue that sits
+   * between the "classifier" and the "link layer".
+   */
+  PriQueue *ifqueue;
+
+  /*
+   * Logging stuff
+   */
+  void log_link_del(nsaddr_t dst);
+  void log_link_broke(Packet *p);
+  void log_link_kept(nsaddr_t dst);
+
+  /* for passing packets up to agents */
+  PortClassifier *dmux_;
 };
 
 #endif /* __aodv_h__ */

@@ -2,8 +2,8 @@
 
 #include <assert.h>
 
-#include <cmu-trace.h>
 #include <aodv/aodv_rqueue.h>
+#include <cmu-trace.h>
 
 #define CURRENT_TIME Scheduler::instance().clock()
 #define QDEBUG
@@ -12,16 +12,14 @@
   Packet Queue used by AODV.
 */
 
-aodv_rqueue::aodv_rqueue()
-{
+aodv_rqueue::aodv_rqueue() {
   head_ = tail_ = 0;
   len_ = 0;
   limit_ = AODV_RTQ_MAX_LEN;
   timeout_ = AODV_RTQ_TIMEOUT;
 }
 
-void aodv_rqueue::enque(Packet *p)
-{
+void aodv_rqueue::enque(Packet *p) {
   struct hdr_cmn *ch = HDR_CMN(p);
 
   /*
@@ -32,27 +30,20 @@ void aodv_rqueue::enque(Packet *p)
   p->next_ = 0;
   ch->ts_ = CURRENT_TIME + timeout_;
 
-  if (len_ == limit_)
-  {
+  if (len_ == limit_) {
     Packet *p0 = remove_head(); // decrements len_
 
     assert(p0);
-    if (HDR_CMN(p0)->ts_ > CURRENT_TIME)
-    {
+    if (HDR_CMN(p0)->ts_ > CURRENT_TIME) {
       drop(p0, DROP_RTR_QFULL);
-    }
-    else
-    {
+    } else {
       drop(p0, DROP_RTR_QTIMEOUT);
     }
   }
 
-  if (head_ == 0)
-  {
+  if (head_ == 0) {
     head_ = tail_ = p;
-  }
-  else
-  {
+  } else {
     tail_->next_ = p;
     tail_ = p;
   }
@@ -62,9 +53,7 @@ void aodv_rqueue::enque(Packet *p)
 #endif // QDEBUG
 }
 
-Packet *
-aodv_rqueue::deque()
-{
+Packet *aodv_rqueue::deque() {
   Packet *p;
 
   /*
@@ -79,9 +68,7 @@ aodv_rqueue::deque()
   return p;
 }
 
-Packet *
-aodv_rqueue::deque(nsaddr_t dst)
-{
+Packet *aodv_rqueue::deque(nsaddr_t dst) {
   Packet *p, *prev;
 
   /*
@@ -95,18 +82,13 @@ aodv_rqueue::deque(nsaddr_t dst)
   if (p == 0)
     return 0;
 
-  if (p == head_)
-  {
+  if (p == head_) {
     p = remove_head();
-  }
-  else if (p == tail_)
-  {
+  } else if (p == tail_) {
     prev->next_ = 0;
     tail_ = prev;
     len_--;
-  }
-  else
-  {
+  } else {
     prev->next_ = p->next_;
     len_--;
   }
@@ -117,8 +99,7 @@ aodv_rqueue::deque(nsaddr_t dst)
   return p;
 }
 
-char aodv_rqueue::find(nsaddr_t dst)
-{
+char aodv_rqueue::find(nsaddr_t dst) {
   Packet *p, *prev;
 
   findPacketWithDst(dst, p, prev);
@@ -132,17 +113,12 @@ char aodv_rqueue::find(nsaddr_t dst)
   Private Routines
 */
 
-Packet *
-aodv_rqueue::remove_head()
-{
+Packet *aodv_rqueue::remove_head() {
   Packet *p = head_;
 
-  if (head_ == tail_)
-  {
+  if (head_ == tail_) {
     head_ = tail_ = 0;
-  }
-  else
-  {
+  } else {
     head_ = head_->next_;
   }
 
@@ -152,28 +128,23 @@ aodv_rqueue::remove_head()
   return p;
 }
 
-void aodv_rqueue::findPacketWithDst(nsaddr_t dst, Packet *&p, Packet *&prev)
-{
+void aodv_rqueue::findPacketWithDst(nsaddr_t dst, Packet *&p, Packet *&prev) {
 
   p = prev = 0;
-  for (p = head_; p; p = p->next_)
-  {
+  for (p = head_; p; p = p->next_) {
     //		if(HDR_IP(p)->dst() == dst) {
-    if (HDR_IP(p)->daddr() == dst)
-    {
+    if (HDR_IP(p)->daddr() == dst) {
       return;
     }
     prev = p;
   }
 }
 
-void aodv_rqueue::verifyQueue()
-{
+void aodv_rqueue::verifyQueue() {
   Packet *p, *prev = 0;
   int cnt = 0;
 
-  for (p = head_; p; p = p->next_)
-  {
+  for (p = head_; p; p = p->next_) {
     cnt++;
     prev = p;
   }
@@ -195,14 +166,11 @@ Packet *p;
 }
 */
 
-bool aodv_rqueue::findAgedPacket(Packet *&p, Packet *&prev)
-{
+bool aodv_rqueue::findAgedPacket(Packet *&p, Packet *&prev) {
 
   p = prev = 0;
-  for (p = head_; p; p = p->next_)
-  {
-    if (HDR_CMN(p)->ts_ < CURRENT_TIME)
-    {
+  for (p = head_; p; p = p->next_) {
+    if (HDR_CMN(p)->ts_ < CURRENT_TIME) {
       return true;
     }
     prev = p;
@@ -210,29 +178,22 @@ bool aodv_rqueue::findAgedPacket(Packet *&p, Packet *&prev)
   return false;
 }
 
-void aodv_rqueue::purge()
-{
+void aodv_rqueue::purge() {
   Packet *p, *prev;
 
-  while (findAgedPacket(p, prev))
-  {
+  while (findAgedPacket(p, prev)) {
     assert(p == 0 || (p == head_ && prev == 0) || (prev->next_ == p));
 
     if (p == 0)
       return;
 
-    if (p == head_)
-    {
+    if (p == head_) {
       p = remove_head();
-    }
-    else if (p == tail_)
-    {
+    } else if (p == tail_) {
       prev->next_ = 0;
       tail_ = prev;
       len_--;
-    }
-    else
-    {
+    } else {
       prev->next_ = p->next_;
       len_--;
     }
