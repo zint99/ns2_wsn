@@ -18,6 +18,5 @@ $0 ~/^f.* RTR/ {
 }
 #输出结果
 END {
-    printf("finish\n");
-    printf("cbr send: %d, recv: %d, forward: %d, r/s Ratio: %.4 \n", sendLine, recvLine,fowardLine, (recvLine/sendLine)) ;
+    printf("%.4f\n",recvLine/sendLine) ;
 }

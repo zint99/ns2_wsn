@@ -50,11 +50,11 @@ set val(nam)    $outName.nam
 # 创建ns对象
 set ns_ [new Simulator]
 # 创建trace文件
-set tracefd [open trace/$val(tr) w]
+set tracefd [open trace/lab1/$val(tr) w]
 # use new trace file
 #$ns_ use-newtrace
 $ns_ trace-all $tracefd
-set namtracefd [open nam/$val(nam) w]
+set namtracefd [open nam/lab1/$val(nam) w]
 $ns_ namtrace-all-wireless $namtracefd $val(x) $val(y)
 
 # 创建topo

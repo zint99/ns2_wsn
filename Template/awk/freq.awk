@@ -1,5 +1,4 @@
-# 计算路由发起频率
-
+# 计算路由发起频率 - new trace format
 BEGIN{
     requests=0;
     frequency=0;
@@ -7,15 +6,11 @@ BEGIN{
 {
     event=$1;
     if(event != "M" && event != "N"){
-        trace_type=$4;
-        packet_id=$6;
-        packet_type=$7;
-        # 使用正则表达式匹配第 24 列中的数字
-        match($24, /\[([0-9]+):/);
-        source_ip=substr($24, RSTART+1, RLENGTH-2);
-        aodv_type=substr($35, 2, 7);
+        id=$5;
+        source_ip=$57;
+        aodv_type=$61;
 
-        if((event=="s")&&(aodv_type=="REQUEST")&&(packet_id==source_ip))
+        if((event=="s")&&(aodv_type=="REQUEST")&&(id==source_ip))
         {
             requests++;
         }
